@@ -1,0 +1,143 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>SME Books</title><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#0F7B53"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="SME Books"><link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root{--bg:#F4F6F4;--card:#fff;--ink:#14201B;--mut:#5B6660;--line:#DDE4DF;--g:#0F7B53;--gt:#fff;--o:#C2410C;--wb:#FFF7ED;--side:#14201B;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+@media(prefers-color-scheme:dark){:root{--bg:#0F1613;--card:#18221D;--ink:#E8EEEA;--mut:#A3B1A9;--line:#2A3731;--g:#3FBF8A;--gt:#07140E;--o:#F0925F;--wb:#2A1D12;--side:#0A100D}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif}
+#app{display:flex;flex-wrap:wrap;min-height:100%}
+nav{flex:0 0 220px;background:var(--side);padding:20px 12px;display:flex;flex-direction:column;gap:4px}
+nav b{color:#fff;font-size:18px;padding:0 12px 16px}
+nav button{all:unset;cursor:pointer;color:#C9D6CE;padding:12px;border-radius:8px;font-size:14px}
+nav button:focus-visible{outline:2px solid #fff}nav button.on{background:var(--g);color:var(--gt);font-weight:600}
+#fab{display:none;position:fixed;right:16px;bottom:84px;width:56px;height:56px;border-radius:28px;border:0;background:var(--g);color:var(--gt);font-size:30px;z-index:6;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+@media(max-width:760px){nav{position:fixed;left:0;right:0;bottom:0;z-index:5;flex-direction:row;overflow-x:auto;padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px));gap:2px}nav b,#sv{display:none}nav button{white-space:nowrap;padding:10px 14px}main{padding:16px 16px 96px}#fab.on{display:block}}
+main{flex:1 1 600px;padding:24px;max-width:1100px;min-width:0}
+h1{margin:0;font-size:24px}h2{margin:0 0 12px;font-size:17px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin:16px 0 14px}.grid .card{margin:0}
+.big{font-size:22px;font-weight:700;margin-top:4px}.in{color:var(--g)}.out{color:var(--o)}.mut{color:var(--mut);font-size:13px}
+.btn{min-height:44px;padding:0 16px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:600 14px Inter,sans-serif;cursor:pointer}
+.btn.g{background:var(--g);color:var(--gt);border:0}.btn.o{border-color:var(--o);color:var(--o)}
+input,select,textarea{min-height:44px;width:100%;border:1px solid #8A968F;border-radius:8px;padding:0 10px;background:var(--card);color:var(--ink);font:inherit}
+textarea{padding:10px;min-height:90px}
+label{display:block;font-size:13px;font-weight:600;margin-bottom:12px}label input,label select{margin-top:6px}
+.row{display:flex;flex-wrap:wrap;gap:12px}.row>*{flex:1 1 180px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:6px}
+.wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.att{background:var(--wb);border-color:#F2C9A5}.att ol{margin:0;padding-left:20px;line-height:1.8}
+dialog{border:0;border-radius:16px;padding:24px;width:min(520px,94vw);background:var(--card);color:var(--ink)}dialog::backdrop{background:rgba(0,0,0,.55)}
+.wa{background:#E7DFD2;border-radius:16px;padding:18px;color:#14201B}.wa div{background:#fff;border-radius:4px 14px 14px 14px;padding:14px;white-space:pre-wrap;font-size:14px}
+a.btn{display:inline-flex;align-items:center;text-decoration:none}
+.auth{max-width:440px;margin:24px auto}
+</style></head><body><div id="app"><nav id="nav"></nav><main id="main"></main></div><button id="fab" aria-label="Record money in" onclick="add('in')">+</button><dialog id="dlg"></dialog>
+<script>
+const $=s=>document.querySelector(s),K='smebooks.v1',M={cash:'Cash',momo:'Mobile money',bank:'Bank'};
+const CI=['Product sales','Services','Other income'],CO=['Stock purchases','Transport','Rent','Salaries','Utilities','Airtime & internet','Other'];
+const DEF=()=>({biz:'',user:'',desc:'',open:{cash:0,momo:0,bank:0},wa:'',freq:'day',close:'19:00',optin:false,tx:[],cashups:{},p:'week',f:'all'});
+let S=DEF(),F={},KEY=null,ACC=[];
+const idb=()=>new Promise((res,rej)=>{const r=indexedDB.open('smebooks',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej()});
+async function kvGet(k){try{const v=localStorage.getItem(k);if(v!==null)return v}catch(e){}try{const d=await idb();return await new Promise(r=>{const q=d.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>r(q.result===undefined?null:q.result);q.onerror=()=>r(null)})}catch(e){return null}}
+async function kvSet(k,v){let ok=false;try{localStorage.setItem(k,v);ok=true}catch(e){}try{const d=await idb();await new Promise((r,j)=>{const t=d.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=r;t.onerror=j});ok=true}catch(e){}return ok}
+const bkey=n=>'b:'+encodeURIComponent(n.trim().toLowerCase().replace(/\s+/g,' '));
+const stat=ok=>{const e=$('#sv');if(e)e.textContent=ok?'Saved on this device':'Not saving: browser storage is blocked'};
+const save=()=>{if(KEY)kvSet('smebooks.data.'+KEY,JSON.stringify(S)).then(stat)};
+const f=n=>'UGX '+Math.round(n).toLocaleString('en-US'),sum=l=>l.reduce((x,t)=>x+t.amt,0);
+const esc=s=>String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ld=d=>new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10),today=()=>ld(new Date());
+const addD=(s,n)=>{const d=new Date(s+'T12:00:00');d.setDate(d.getDate()+n);return ld(d)};
+const inR=(a,b)=>S.tx.filter(t=>t.date>=a&&t.date<=b);
+function stats(a,b){let i=0,o=0,c={},ci={};inR(a,b).forEach(t=>{if(t.type==='in'){i+=t.amt;ci[t.cat]=(ci[t.cat]||0)+t.amt}if(t.type==='out'){o+=t.amt;c[t.cat]=(c[t.cat]||0)+t.amt}});return{i,o,p:i-o,c,ci}}
+function range(p){const T=today();if(p==='day')return[T,T,addD(T,-1),addD(T,-1)];if(p==='week')return[addD(T,-6),T,addD(T,-13),addD(T,-7)];const m=T.slice(0,8)+'01',d=new Date(m+'T12:00:00');d.setMonth(d.getMonth()-1);return[m,T,ld(d),addD(m,-1)]}
+function bal(){const b={...S.open};S.tx.forEach(t=>{if(t.type==='in'&&t.paid)b[t.m]+=t.amt;else if(t.type==='out'&&t.paid)b[t.m]-=t.amt;else if(t.type==='tr'){b[t.m]-=t.amt;b[t.to]+=t.amt}});return b}
+const unpaid=ty=>S.tx.filter(t=>t.type===ty&&!t.paid);
+function ins(p){const[a,b,pa,pb]=range(p),s=stats(a,b),q=stats(pa,pb),r=[],g=[],T=today();
+Object.keys(s.c).forEach(k=>{const v=q.c[k]||0;if(v>0&&s.c[k]>v*1.25)r.push(`${k} spending is ${Math.round((s.c[k]/v-1)*100)}% above the previous period.`)});
+if(s.o>s.i&&s.o>0)r.push('Money out is higher than money in. Review costs or raise prices.');
+const ar=unpaid('in'),old=ar.filter(t=>t.date<=addD(T,-14));
+if(ar.length)r.push(`${f(sum(ar))} is owed by customers${old.length?`, ${old.length} older than 14 days`:''}. Send reminders.`);
+if(unpaid('out').length)r.push(`You owe suppliers ${f(sum(unpaid('out')))}. Plan to pay on time.`);
+if(s.i>0&&q.i>0&&s.p/s.i<q.p/q.i-.02)r.push(`Profit margin fell from ${Math.round(q.p/q.i*100)}% to ${Math.round(s.p/s.i*100)}%.`);
+if(s.i===0)r.push('No sales recorded this period.');
+if(p==='day'&&!S.cashups[T])r.push('Today’s cash-up is not done.');
+if(s.p>q.p&&s.i>0)g.push('Profit is up on the previous period.');
+return{r,g,s,q}}
+function msg(p){const I=ins(p),s=I.s,n={day:'Daily',week:'Weekly',month:'Monthly'}[p];
+return `*${n} summary · ${S.biz}*\nMoney in: ${f(s.i)}\nMoney out: ${f(s.o)}\nProfit: ${f(s.p)}\n\n*To improve*\n`+(I.r.length?I.r.slice(0,3).map((x,i)=>`${i+1}. ${x}`).join('\n'):'Nothing urgent. Keep it up.')+(I.g.length?'\n\n*Going well*\n'+I.g[0]:'')}
+const card=(l,v,c)=>`<div class="card"><div class="mut">${l}</div><div class="big ${c}">${f(v)}</div></div>`;
+const hdr=(t,x='')=>`<div class="bar"><h1>${t}</h1><div style="display:flex;gap:8px;flex-wrap:wrap">${x}</div></div>`;
+const addBtns='<button class="btn g" onclick="add(\'in\')">+ Money in</button><button class="btn o" onclick="add(\'out\')">+ Money out</button>';
+function chart(){const T=today(),d=[];for(let i=6;i>=0;i--){const x=addD(T,-i),s=stats(x,x);d.push([x,s.i,s.o])}const m=Math.max(1,...d.flatMap(r=>[r[1],r[2]]));
+return `<div style="display:flex;gap:10px;align-items:flex-end;height:150px;border-bottom:1px solid var(--line)">${d.map(r=>`<div style="flex:1;display:flex;gap:3px;align-items:flex-end;height:100%"><div title="${f(r[1])}" style="flex:1;background:var(--g);height:${r[1]/m*100}%"></div><div title="${f(r[2])}" style="flex:1;background:var(--o);height:${r[2]/m*100}%"></div></div>`).join('')}</div><div style="display:flex;gap:10px" class="mut">${d.map(r=>`<span style="flex:1;text-align:center">${new Date(r[0]+'T12:00:00').toLocaleDateString('en',{weekday:'short'})}</span>`).join('')}</div><div class="mut" style="margin-top:8px">Green = money in · Orange = money out · last 7 days</div>`}
+const tr=t=>`<tr><td>${t.date}</td><td>${{in:'Money in',out:'Money out',tr:'Transfer'}[t.type]}</td><td>${esc(t.cat||'')}</td><td>${esc(t.party||t.note||'')}</td><td>${t.type==='tr'?M[t.m]+' → '+M[t.to]:t.paid?M[t.m]:'On credit'}</td><td class="${t.type}">${t.type==='out'?'−':''}${f(t.amt)}</td></tr>`;
+const V={
+dash(){const p=S.p,I=ins(p),s=I.s,B=bal(),cats=Object.entries(s.c).sort((a,b)=>b[1]-a[1]),mx=cats.length?cats[0][1]:1;
+const pb=['day','week','month'].map(x=>`<button class="btn${p===x?' g':''}" onclick="S.p='${x}';go()">${{day:'Today',week:'Week',month:'Month'}[x]}</button>`).join('');
+return hdr(esc(S.biz),pb+addBtns)+(S.tx.length?'':'<div class="card att">No entries yet. Tap + Money in to record your first sale, or <button class="btn" onclick="sample()">load sample data</button> to explore.</div>')+
+`<div class="grid">${card('Money in',s.i,'in')}${card('Money out',s.o,'out')}${card('Net profit',s.p,'')}${card('Owed to me',sum(unpaid('in')),'')}${card('Cash, mobile money, bank',B.cash+B.momo+B.bank,'')}${card('I owe',sum(unpaid('out')),'')}</div>
+<div class="row"><div class="card" style="flex:2 1 400px"><h2>Money in vs money out</h2>${chart()}</div><div class="card" style="flex:1 1 240px"><h2>Where money went</h2>${cats.length?cats.map(([k,v])=>`<div style="margin-bottom:10px;font-size:13px">${esc(k)} · ${f(v)}<div style="height:8px;border-radius:4px;background:var(--o);width:${v/mx*100}%;margin-top:3px"></div></div>`).join(''):'<p class="mut">No spending in this period.</p>'}</div></div>
+<div class="card att"><h2>Needs attention</h2>${I.r.length?'<ol>'+I.r.map(x=>`<li>${esc(x)}</li>`).join('')+'</ol>':'<p style="margin:0">Nothing urgent. Keep it up.</p>'}</div>
+<div class="card"><h2>Recent</h2><div class="wrap"><table>${S.tx.slice(-5).reverse().map(tr).join('')||'<tr><td class="mut">Nothing yet.</td></tr>'}</table></div></div>`},
+tx(){const L=S.tx.filter(t=>S.f==='all'||t.type===S.f).slice().reverse();
+return hdr('Transactions',`<select onchange="S.f=this.value;go()" style="width:auto">${[['all','All'],['in','Money in'],['out','Money out'],['tr','Transfers']].map(([k,l])=>`<option value="${k}"${S.f===k?' selected':''}>${l}</option>`).join('')}</select>`+addBtns)+`<div class="card wrap"><table><tr><th>Date</th><th>Type</th><th>Category</th><th>Who / note</th><th>Account</th><th>Amount</th><th></th></tr>${L.map(t=>tr(t).replace('</tr>',`<td><button class="btn" style="min-height:36px" onclick="del(${t.id},this)">Delete</button></td></tr>`)).join('')||'<tr><td class="mut" colspan="7">No transactions.</td></tr>'}</table></div>`},
+people(){const sec=(ty,tt)=>{const L=unpaid(ty).sort((a,b)=>a.date<b.date?-1:1);return `<div class="card wrap"><h2>${tt}: ${f(sum(L))}</h2>${L.length?`<table>${L.map(t=>`<tr><td>${t.date}</td><td>${esc(t.party||'(no name)')}</td><td>${esc(t.cat)}</td><td>${f(t.amt)}</td><td><select id="m${t.id}" style="min-width:140px">${Object.keys(M).map(k=>`<option value="${k}">${M[k]}</option>`).join('')}</select></td><td><button class="btn g" style="min-height:36px" onclick="settle(${t.id})">Mark paid</button></td></tr>`).join('')}</table>`:'<p class="mut">Nothing outstanding.</p>'}</div>`};
+return hdr('Customers and suppliers')+sec('in','Owed to me')+sec('out','I owe')},
+cash(){const T=today(),e=bal().cash,c=S.cashups[T],h=Object.entries(S.cashups).sort().reverse().slice(0,7);
+return hdr('Daily cash-up')+`<div class="card"><p>Cash the books say you should have: <b>${f(e)}</b></p><label>Cash you counted (UGX)<input id="cnt" inputmode="numeric" value="${c?c.cnt:''}"></label><button class="btn g" onclick="cashup()">Save today’s cash-up</button><p id="cu" class="mut">${c?`Saved for today: difference ${f(c.diff)}${c.diff<0?' (short)':c.diff>0?' (over)':''}.`:''}</p></div><div class="card wrap"><h2>History</h2><table>${h.map(([d,x])=>`<tr><td>${d}</td><td>Expected ${f(x.exp)}</td><td>Counted ${f(x.cnt)}</td><td class="${x.diff<0?'out':''}">Difference ${f(x.diff)}</td></tr>`).join('')||'<tr><td class="mut">No cash-ups yet.</td></tr>'}</table></div>`},
+reports(){const m=today().slice(0,8)+'01',a=S.rf||m,b=S.rt||today(),s=stats(a,b),B=bal(),ar=sum(unpaid('in')),ap=sum(unpaid('out')),all=stats('0000','9999'),eq=B.cash*0+S.open.cash+S.open.momo+S.open.bank+all.p,as=B.cash+B.momo+B.bank+ar,ok=Math.round(as-ap)===Math.round(eq);
+const L=o=>Object.entries(o).map(([k,v])=>`<tr><td>${esc(k)}</td><td>${f(v)}</td></tr>`).join('');
+const csv='date,type,category,party,account,amount\n'+S.tx.map(t=>[t.date,t.type,t.cat||'',(t.party||'').replace(/,/g,' '),t.paid?t.m:'credit',t.amt].join(',')).join('\n');
+return hdr('Reports')+`<div class="card"><h2>Profit and loss</h2><div class="row"><label>From<input type="date" value="${a}" onchange="S.rf=this.value;go()"></label><label>To<input type="date" value="${b}" onchange="S.rt=this.value;go()"></label></div><table><tr><th>Money in</th><th></th></tr>${L(s.ci)}<tr><td><b>Total in</b></td><td class="in"><b>${f(s.i)}</b></td></tr><tr><th>Money out</th><th></th></tr>${L(s.c)}<tr><td><b>Total out</b></td><td class="out"><b>${f(s.o)}</b></td></tr><tr><td><b>Net profit</b></td><td><b>${f(s.p)}</b></td></tr></table></div>
+<div class="card"><h2>Balance sheet (all time)</h2><table><tr><td>Cash</td><td>${f(B.cash)}</td></tr><tr><td>Mobile money</td><td>${f(B.momo)}</td></tr><tr><td>Bank</td><td>${f(B.bank)}</td></tr><tr><td>Owed to me</td><td>${f(ar)}</td></tr><tr><td><b>Assets</b></td><td><b>${f(as)}</b></td></tr><tr><td>I owe</td><td>${f(ap)}</td></tr><tr><td>Owner’s equity (opening balances + profit)</td><td>${f(eq)}</td></tr></table><p class="${ok?'in':'out'}"><b>${ok?'Books balance: assets equal liabilities plus equity.':'Books do not balance. Check your opening balances.'}</b></p></div>
+<div class="card"><h2>Export</h2><textarea readonly id="csv">${esc(csv)}</textarea><button class="btn" style="margin-top:10px" onclick="try{navigator.clipboard.writeText($('#csv').value)}catch(e){$('#csv').select()}">Copy CSV</button></div>`},
+wa(){const p=S.freq==='both'?'week':S.freq,num=(S.wa||'').replace(/\D/g,''),m=msg(p),ok=S.optin&&num.length>=9;
+return hdr('WhatsApp reports')+`<div class="row"><div class="card"><label>WhatsApp number (with country code)<input value="${esc(S.wa)}" placeholder="+256 7XX XXX XXX" onchange="S.wa=this.value;save();go()"></label><label>How often?<select onchange="S.freq=this.value;save();go()"><option value="day"${S.freq==='day'?' selected':''}>Every day</option><option value="week"${S.freq==='week'?' selected':''}>Every week</option><option value="both"${S.freq==='both'?' selected':''}>Both (preview shows weekly)</option></select></label><label>Business closes at<input type="time" value="${S.close}" onchange="S.close=this.value;save()"></label><label style="display:flex;gap:10px;align-items:center;font-weight:400;font-size:14px"><input type="checkbox" style="width:20px;min-height:20px;margin:0"${S.optin?' checked':''} onchange="S.optin=this.checked;save();go()">I agree to receive reports on WhatsApp. I can stop any time.</label><div style="display:flex;gap:8px;flex-wrap:wrap">${ok?`<a class="btn g" target="_blank" rel="noopener" href="https://wa.me/${num}?text=${encodeURIComponent(m)}">Send now on WhatsApp</a>`:'<button class="btn" disabled>Add a number and agree to send</button>'}</div><p class="mut">Sending now opens WhatsApp with the message ready. Automatic sending at closing time comes with the server phase.</p></div>
+<div class="card"><div class="mut" style="margin-bottom:8px">Preview</div><div class="wa"><div>${esc(m).replace(/\*(.+?)\*/g,'<b>$1</b>')}</div></div></div></div>`},
+set(){return hdr('Settings')+instCard()+`<div class="card"><div class="row"><label>Business name<input value="${esc(S.biz)}" readonly></label><label>Your name<input value="${esc(S.user)}" onchange="S.user=this.value;save();go()"></label></div><label>About the business<textarea onchange="S.desc=this.value;save()">${esc(S.desc)}</textarea></label><h2>Opening balances (UGX)</h2><div class="row">${Object.keys(M).map(k=>`<label>${M[k]}<input inputmode="numeric" value="${S.open[k]}" onchange="S.open.${k}=parseFloat(this.value.replace(/,/g,''))||0;save()"></label>`).join('')}</div><p class="mut">Your data is saved on this device only. Keep a backup below.</p><button class="btn" onclick="sample()">Load sample data</button> <button class="btn o" onclick="reset(this)">Erase all data</button></div><div class="card"><h2>Change password</h2><div class="row"><label>Current password<input id="op" type="password"></label><label>New password (6+ characters)<input id="np" type="password"></label></div><button class="btn" onclick="chpw()">Change password</button><p id="pwm" class="mut"></p></div><div class="card"><h2>Backup and restore</h2><p class="mut">Copy this text and keep it safe, for example in a WhatsApp message to yourself. Paste it below to restore.</p><textarea readonly id="bk">${esc(JSON.stringify(S))}</textarea><button class="btn" style="margin:10px 0" onclick="try{navigator.clipboard.writeText($('#bk').value)}catch(e){$('#bk').select()}">Copy backup</button><label>Paste a backup to restore<textarea id="rs"></textarea></label><button class="btn" onclick="restore()">Restore</button></div>`}};
+const TABS=[['dash','Dashboard'],['tx','Transactions'],['people','Customers & suppliers'],['cash','Cash-up'],['reports','Reports'],['wa','WhatsApp'],['set','Settings']];
+function go(v){if(v)S.view=v;S.view=S.view||'dash';$('#nav').innerHTML='<b>SME Books</b>'+TABS.map(([k,l])=>`<button class="${S.view===k?'on':''}" onclick="go('${k}')">${l.replace('&','&amp;')}</button>`).join('')+'<span id="sv" style="padding:12px;font-size:12px;color:#C9D6CE;margin-top:auto"></span><button onclick="logout()">Log out ('+esc(S.user)+')</button>';$('#nav').style.display='';$('#fab').classList.add('on');$('#main').innerHTML=V[S.view]()}
+const acc=()=>Object.keys(M).map(k=>`<option value="${k}">${M[k]}</option>`).join('');
+function add(t){F.t=t;$('#dlg').innerHTML=`<form id="tf" onsubmit="return saveTx(event)"><h2>${{in:'Record money in',out:'Record money out',tr:'Move money'}[t]}</h2><div style="display:flex;gap:8px;margin-bottom:14px">${[['in','Sale'],['out','Money out'],['tr','Transfer']].map(([k,l])=>`<button type="button" class="btn${t===k?' g':''}" style="flex:1" onclick="add('${k}')">${l}</button>`).join('')}</div><label>Amount (UGX)<input name="amt" inputmode="numeric" required style="font-size:22px;font-weight:700"></label>${t==='tr'?`<div class="row"><label>From<select name="m">${acc()}</select></label><label>To<select name="to">${acc().replace('value="cash"','value="cash" ').replace(/(value="momo")/,'$1 selected')}</select></label></div>`:`<div class="row"><label>Category<select name="cat">${(t==='in'?CI:CO).map(c=>`<option>${c}</option>`).join('')}</select></label><label>${t==='in'?'Paid with':'Paid from'}<select name="m">${acc()}<option value="credit">On credit</option></select></label></div><label>${t==='in'?'Customer':'Supplier'} (optional)<input name="party"></label>`}<div class="row"><label>Date<input type="date" name="date" value="${today()}"></label><label>Note<input name="note"></label></div><p id="er" class="out"></p><div style="display:flex;gap:10px;justify-content:flex-end"><button type="button" class="btn" onclick="$('#dlg').close()">Cancel</button><button class="btn g">Save</button></div></form>`;if(!$('#dlg').open)$('#dlg').showModal()}
+function saveTx(e){e.preventDefault();const d=new FormData(e.target),amt=parseFloat(String(d.get('amt')).replace(/,/g,'')),m=d.get('m'),er=$('#er');
+if(!(amt>0)){er.textContent='Enter an amount above zero.';return false}
+if(F.t==='tr'&&m===d.get('to')){er.textContent='Choose two different accounts.';return false}
+const t={id:Date.now(),date:d.get('date')||today(),type:F.t,amt,cat:d.get('cat')||'',party:d.get('party')||'',note:d.get('note')||'',paid:m!=='credit',m:m==='credit'?null:m};
+if(F.t==='tr')t.to=d.get('to');S.tx.push(t);save();$('#dlg').close();go();return false}
+function del(id,b){if(b.dataset.s){S.tx=S.tx.filter(t=>t.id!==id);save();go()}else{b.dataset.s=1;b.textContent='Sure?';setTimeout(()=>{b.textContent='Delete';delete b.dataset.s},2500)}}
+function settle(id){const t=S.tx.find(x=>x.id===id);t.m=$('#m'+id).value;t.paid=true;save();go()}
+function cashup(){const c=parseFloat($('#cnt').value.replace(/,/g,''));if(isNaN(c)){$('#cu').textContent='Enter the cash you counted.';return}const e=bal().cash;S.cashups[today()]={exp:e,cnt:c,diff:c-e};save();go()}
+function reset(b){if(b.dataset.s){S=Object.assign(DEF(),{biz:S.biz,user:S.user,desc:S.desc});save();go()}else{b.dataset.s=1;b.textContent='Tap again to erase';setTimeout(()=>{b.textContent='Erase all data';delete b.dataset.s},3000)}}
+function sample(){const T=today();let id=Date.now();const P=(d,type,amt,cat,m,party,paid=true)=>S.tx.push({id:id++,date:addD(T,-d),type,amt,cat,m:paid?m:null,party,note:'',paid});
+S.tx=[];S.open={cash:200000,momo:100000,bank:500000};
+for(let d=0;d<21;d++){P(d,'in',150000+(d*53%9)*30000,'Product sales','cash','');P(d,'in',80000+(d*37%7)*20000,'Product sales','momo','');if(d%2==0)P(d,'out',90000+(d*29%6)*15000,'Stock purchases','cash','Wholesaler');P(d,'out',(d<7?40000:20000)+(d%3)*5000,'Transport','momo','');if(d%7==0)P(d,'out',200000,'Rent','bank','Landlord')}
+P(16,'in',180000,'Product sales',null,'John K.',false);P(3,'in',240000,'Product sales',null,'Sarah N.',false);P(2,'out',150000,'Stock purchases',null,'Wholesaler',false);save();go('dash')}
+const b64=b=>btoa(String.fromCharCode(...new Uint8Array(b))),ub=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0)),newSalt=()=>b64(crypto.getRandomValues(new Uint8Array(16)));
+async function hp(pw,salt){const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveBits']);return b64(await crypto.subtle.deriveBits({name:'PBKDF2',salt:ub(salt),iterations:150000,hash:'SHA-256'},k,256))}
+const authBox=h=>{$('#nav').style.display='none';$('#fab').classList.remove('on');$('#main').innerHTML='<div class="card auth">'+h+'</div>'};
+function loginView(){authBox(`<h1>SME Books</h1><p class="mut">Log in to your business.</p><form onsubmit="doLogin(event);return false"><label>Business name<input name="biz" autocomplete="organization" required></label><label>Password<input name="pw" type="password" autocomplete="current-password" required></label><p class="out" id="er"></p><button class="btn g" style="width:100%">Log in</button></form><p class="mut" style="margin-top:16px">New here? <a href="#" onclick="setupView();return false">Set up a new business</a></p>`)}
+function setupView(){authBox(`<h1>Set up your business</h1><p class="mut">Everything is stored on this device. There is no password recovery, so choose one you will remember.</p><form onsubmit="doSetup(event);return false"><label>Your name<input name="user" autocomplete="name" required></label><label>Business name (you will use this to log in)<input name="biz" autocomplete="organization" required></label><label>Describe your business<textarea name="desc" placeholder="What do you sell or do?"></textarea></label><label>Create a password (6+ characters)<input name="pw" type="password" autocomplete="new-password" required></label><label>Confirm password<input name="pw2" type="password" autocomplete="new-password" required></label><p class="out" id="er"></p><button class="btn g" style="width:100%">Create and open</button></form>${ACC.length?'<p class="mut" style="margin-top:16px"><a href="#" onclick="loginView();return false">Back to log in</a></p>':''}`)}
+async function doSetup(e){const d=new FormData(e.target),er=$('#er'),user=d.get('user').trim(),biz=d.get('biz').trim(),pw=d.get('pw'),key=bkey(biz);
+if(pw.length<6)return er.textContent='Use a password of at least 6 characters.';
+if(pw!==d.get('pw2'))return er.textContent='The two passwords do not match.';
+if(ACC.some(a=>a.key===key))return er.textContent='That business name already exists on this device. Log in instead.';
+try{const salt=newSalt(),hash=await hp(pw,salt);
+if(!await kvSet('smebooks.acct.'+key,JSON.stringify({biz,user,desc:d.get('desc').trim(),salt,hash}))){er.textContent='This browser is blocking storage, so your data could not be saved. Open the page in a normal (not private) browser tab.';return}
+let base=DEF();if(!ACC.length){const o=await kvGet(K);if(o)try{base=Object.assign(base,JSON.parse(o))}catch(x){}}
+ACC.push({key,biz});await kvSet('smebooks.data.'+key,JSON.stringify(base));await kvSet('smebooks.accts',JSON.stringify(ACC));await openAcct(key)}catch(x){er.textContent='Could not set up on this browser. Try again.'}}
+async function doLogin(e){const d=new FormData(e.target),er=$('#er'),key=bkey(d.get('biz')),bad='Business name or password is incorrect.';
+if(!ACC.find(x=>x.key===key))return er.textContent=bad;
+try{const r=JSON.parse(await kvGet('smebooks.acct.'+key));if(await hp(d.get('pw'),r.salt)!==r.hash)return er.textContent=bad;await openAcct(key)}catch(x){er.textContent='Could not log in. Try again.'}}
+async function openAcct(k){const a=JSON.parse(await kvGet('smebooks.acct.'+k)),d=await kvGet('smebooks.data.'+k);KEY=k;S=Object.assign(DEF(),{user:a.user,desc:a.desc},d?JSON.parse(d):{},{biz:a.biz});try{sessionStorage.setItem('smebooks.sess',k)}catch(x){}go('dash');save()}
+function logout(){try{sessionStorage.removeItem('smebooks.sess')}catch(x){}KEY=null;S=DEF();loginView()}
+async function chpw(){const m=$('#pwm'),np=$('#np').value;try{const r=JSON.parse(await kvGet('smebooks.acct.'+KEY));if(await hp($('#op').value,r.salt)!==r.hash)return m.textContent='Current password is wrong.';if(np.length<6)return m.textContent='Use at least 6 characters.';r.salt=newSalt();r.hash=await hp(np,r.salt);await kvSet('smebooks.acct.'+KEY,JSON.stringify(r));m.textContent='Password changed.'}catch(x){m.textContent='Could not change password.'}}
+function restore(){try{const d=JSON.parse($('#rs').value);if(!Array.isArray(d.tx))throw 0;S=Object.assign(DEF(),d,{biz:S.biz});save();go('dash')}catch(x){$('#rs').value='';$('#rs').placeholder='That is not a valid backup.'}}
+async function boot(){try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(x){}
+try{ACC=JSON.parse(await kvGet('smebooks.accts')||'[]')}catch(x){ACC=[]}
+let k=null;try{k=sessionStorage.getItem('smebooks.sess')}catch(x){}
+if(k&&ACC.some(a=>a.key===k)){try{await openAcct(k);return}catch(x){}}
+ACC.length?loginView():setupView()}
+let DP=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();DP=e;if(S.view==='set'&&KEY)go()});
+function instCard(){if(matchMedia('(display-mode: standalone)').matches||navigator.standalone)return'';return `<div class="card"><h2>Install on your phone</h2>${DP?'<button class="btn g" onclick="DP.prompt()">Install SME Books</button>':'<p style="margin:0">Android (Chrome): menu, then Install app. iPhone (Safari): Share, then Add to Home Screen.</p>'}</div>`}
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+boot();
+</script></body></html>
